@@ -1,51 +1,59 @@
-// In-memory store (resets on redeploy / serverless cold start)
-let expenses = [];
+// /api/expenses.js
+
+let expenses = []; // In-memory storage (resets on cold start)
 
 export default function handler(req, res) {
   if (req.method === "GET") {
     return res.status(200).json({
       success: true,
-      data: expenses
+      data: expenses,
     });
   }
 
   if (req.method === "POST") {
-    const { amount, description, category, date } = req.body || {};
+    try {
+      const { amount, description, category, date } = req.body;
 
-    // Validate required fields
-    const missing = [];
-    if (amount === undefined) missing.push("amount");
-    if (!description) missing.push("description");
-    if (!category) missing.push("category");
-    if (!date) missing.push("date");
+      // Validate fields
+      const missing = [];
+      if (amount === undefined) missing.push("amount");
+      if (!description) missing.push("description");
+      if (!category) missing.push("category");
+      if (!date) missing.push("date");
 
-    if (missing.length > 0) {
-      return res.status(400).json({
+      if (missing.length > 0) {
+        return res.status(400).json({
+          success: false,
+          error: `Missing required field(s): ${missing.join(", ")}`,
+        });
+      }
+
+      const newExpense = {
+        id: expenses.length + 1,
+        amount: Number(amount),
+        description,
+        category,
+        date: new Date(date).toISOString(),
+      };
+
+      expenses.push(newExpense);
+
+      return res.status(201).json({
+        success: true,
+        data: newExpense,
+      });
+    } catch (err) {
+      return res.status(500).json({
         success: false,
-        error: "Missing required fields",
-        missingFields: missing
+        error: "Internal Server Error",
+        details: err.message,
       });
     }
-
-    const newExpense = {
-      id: expenses.length + 1,
-      amount,
-      description,
-      category,
-      date
-    };
-
-    expenses.push(newExpense);
-
-    return res.status(201).json({
-      success: true,
-      data: newExpense
-    });
   }
 
-  // Unsupported method
+  // Method not allowed
   return res.status(405).json({
     success: false,
-    error: `Method ${req.method} not allowed`
+    error: "Method Not Allowed",
   });
 }
