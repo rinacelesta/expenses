@@ -49,4 +49,3 @@ export default function handler(req, res) {
     error: `Method ${req.method} not allowed`
   });
 }
-
